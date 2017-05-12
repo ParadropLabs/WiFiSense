@@ -35,7 +35,7 @@ enabled when launching it on Paradrop.  Below is an example configuration.
     "REPORTING_INTERVAL": 30,
     "REPORTING_URL": "http://example.com/wifiReport",
     "SIGNING_KEY": "secret"
-  }
+  },
   "download": {
     "url": "https://github.com/ParadropLabs/WiFiSense"
   }
