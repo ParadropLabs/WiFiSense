@@ -243,9 +243,21 @@ func main() {
 
 	detections = make(map[string]*StationStatus)
 
-	handle, err := pcap.OpenLive("mon0", 1600, true, pcap.BlockForever)
-	if err != nil {
-		panic(err)
+	var handle *pcap.Handle
+	for {
+		var err error
+
+		// There is a race condition on Paradrop where this code may run before
+		// the interface has been added to our container.  Therefore, we should
+		// check for error and retry.
+		handle, err = pcap.OpenLive("mon0", 1600, true, pcap.BlockForever)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
 	}
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
