@@ -4,7 +4,7 @@ COPY main.go /opt/sensing/
 WORKDIR /opt/sensing
 
 RUN apt-get update && \
-    apt-get install -y libpcap-dev && \
+    apt-get install -y iw libpcap-dev && \
     go get -d -v && \
     go build
 
