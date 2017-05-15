@@ -11,9 +11,14 @@ Environment Variables
 * REPORTING_INTERVAL: Integer time (in seconds) between reports (default: 30).
 * REPORTING_URL: The data will be sent with an HTTP POST to this URL.
 * SIGNING_KEY: Secret key used to produce a SHA256 HMAC signature (default: null).
+* SCAN_CHANNELS: List of channels to scan for data transmissions (default: null).
 
 REPORTING_URL is mandatory.  The chute will not function unless that
 environment variable is set.  Other variables have working defaults.
+
+If SCAN_CHANNELS is set, wifisense will hop between the channels in the list to
+scan for data transmissions.  It should be a comma-separated string, e.g.
+"1,6,11".
 
 Chute Configuration
 -------------------

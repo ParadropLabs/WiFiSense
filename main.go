@@ -10,7 +10,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/gopacket"
@@ -93,7 +95,8 @@ func sendPresenceReport(report *PresenceReport) {
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonReport))
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -111,7 +114,8 @@ func sendPresenceReport(report *PresenceReport) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	defer resp.Body.Close()
@@ -200,12 +204,41 @@ func handleFrame(frame gopacket.Packet) {
 	}
 }
 
+func HopChannels(channels []string) {
+	ticker := time.NewTicker(100 * time.Millisecond)
+
+	var i int = 0
+	for _ = range ticker.C {
+		cmd := exec.Command("iw", "dev", "mon0", "set", "channel", channels[i])
+		err := cmd.Start()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		err = cmd.Wait()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		i = (i + 1) % len(channels)
+	}
+}
+
 func main() {
 	// Read reporting interval from environment variable.
 	// Default to 30 seconds if not set appropriately.
 	interval, _ := strconv.Atoi(os.Getenv("REPORTING_INTERVAL"))
 	if interval == 0 {
 		interval = 30
+	}
+
+	// If configured with a list of channels, start a goroutine to do the
+	// channel hopping.
+	scanString := os.Getenv("SCAN_CHANNELS")
+	if scanString != "" {
+		channels := strings.Split(scanString, ",")
+		go HopChannels(channels)
 	}
 
 	detections = make(map[string]*StationStatus)
@@ -229,7 +262,7 @@ func main() {
 		case <-ticker.C:
 			report := makePresenceReport()
 			sendPresenceReport(report)
-			fmt.Println(report)
+			fmt.Printf("Reported %d devices.\n", len(report.ProbeRequests))
 		}
 	}
 }
