@@ -18,7 +18,8 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-type StationTracking struct {
+type StationStatus struct {
+	IdlePeriods		int
 	Count			int
 	SignalSum		int
 	MinSignal		int8
@@ -47,7 +48,40 @@ type PresenceReport struct {
 	ProbeRequests	[]StationReport	`json:"probe_requests"`
 }
 
-var detections map[string]*StationTracking
+var detections map[string]*StationStatus
+
+func (status *StationStatus) IsIdle() bool {
+	return (status.IdlePeriods > 0)
+}
+
+func (status *StationStatus) Reset() {
+	if status.Count > 1 {
+		status.Count = 1
+
+		status.SignalSum = int(status.LastSeenSignal)
+		status.MinSignal = status.LastSeenSignal
+		status.MaxSignal = status.LastSeenSignal
+	}
+
+	status.IdlePeriods++
+}
+
+func (status *StationStatus) Update(signal int8) {
+	status.IdlePeriods = 0
+
+	status.Count += 1
+
+	status.SignalSum += int(signal)
+	if signal < status.MinSignal {
+		status.MinSignal = signal
+	}
+	if signal > status.MaxSignal {
+		status.MaxSignal = signal
+	}
+	status.LastSeenSignal = signal
+
+	status.LastSeen = time.Now().Unix()
+}
 
 func sendPresenceReport(report *PresenceReport) {
 	url := os.Getenv("REPORTING_URL")
@@ -103,19 +137,26 @@ func makePresenceReport() *PresenceReport {
 		ProbeRequests: make([]StationReport, 0),
 	}
 
-	for source, tracking := range detections {
+	for source, status := range detections {
+		if status.IsIdle() {
+			delete(detections, source)
+			continue
+		}
+
 		stationReport := StationReport{
 			Mac: source,
-			Count: tracking.Count,
-			MinSignal: tracking.MinSignal,
-			MaxSignal: tracking.MaxSignal,
-			AvgSignal: int8(tracking.SignalSum / tracking.Count),
-			LastSeenSignal: tracking.LastSeenSignal,
-			FirstSeen: tracking.FirstSeen,
-			LastSeen: tracking.LastSeen,
+			Count: status.Count,
+			MinSignal: status.MinSignal,
+			MaxSignal: status.MaxSignal,
+			AvgSignal: int8(status.SignalSum / status.Count),
+			LastSeenSignal: status.LastSeenSignal,
+			FirstSeen: status.FirstSeen,
+			LastSeen: status.LastSeen,
 		}
 
 		presenceReport.ProbeRequests = append(presenceReport.ProbeRequests, stationReport)
+
+		status.Reset()
 	}
 
 	return presenceReport
@@ -145,30 +186,21 @@ func handleFrame(frame gopacket.Packet) {
 		source := dot11.Address2.String()
 
 		// If this is the first time seeing the station,
-		// initialize tracking state.
+		// initialize status.
 		if _, ok := detections[source]; !ok {
-			detections[source] = &StationTracking{
+			detections[source] = &StationStatus{
 				FirstSeen: time.Now().Unix(),
 				MinSignal: signal,
 				MaxSignal: signal,
 			}
 		}
 
-		tracking := detections[source]
-		tracking.Count += 1
-		tracking.SignalSum += int(signal)
-		if signal < tracking.MinSignal {
-			tracking.MinSignal = signal
-		}
-		if signal > tracking.MaxSignal {
-			tracking.MaxSignal = signal
-		}
-		tracking.LastSeenSignal = signal
-		tracking.LastSeen = time.Now().Unix()
+		status := detections[source]
+		status.Update(signal)
 	}
 }
 
-func sendPeriodicReports() {
+func main() {
 	// Read reporting interval from environment variable.
 	// Default to 30 seconds if not set appropriately.
 	interval, _ := strconv.Atoi(os.Getenv("REPORTING_INTERVAL"))
@@ -176,19 +208,7 @@ func sendPeriodicReports() {
 		interval = 30
 	}
 
-	for {
-		time.Sleep(time.Duration(interval) * time.Second)
-
-		report := makePresenceReport()
-		sendPresenceReport(report)
-		fmt.Println(report)
-	}
-}
-
-func main() {
-	detections = make(map[string]*StationTracking)
-
-	go sendPeriodicReports()
+	detections = make(map[string]*StationStatus)
 
 	handle, err := pcap.OpenLive("mon0", 1600, true, pcap.BlockForever)
 	if err != nil {
@@ -196,7 +216,20 @@ func main() {
 	}
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	for frame := range packetSource.Packets() {
-		handleFrame(frame)
+
+	source := packetSource.Packets()
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+
+	// Main loop: handle incoming frames and send a presence report every time
+	// the ticker fires.
+	for {
+		select {
+		case frame := <-source:
+			handleFrame(frame)
+		case <-ticker.C:
+			report := makePresenceReport()
+			sendPresenceReport(report)
+			fmt.Println(report)
+		}
 	}
 }
