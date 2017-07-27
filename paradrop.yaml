@@ -1,0 +1,13 @@
+version: 1
+config:
+  name: wifisense
+  net:
+    monitor:
+      type: wifi
+      mode: monitor
+      intfName: mon0
+  environment:
+    NETWORK_ID: 0
+    REPORTING_INTERVAL: 30
+    REPORTING_URL: null
+    SIGNING_KEY: null
