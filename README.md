@@ -46,3 +46,45 @@ enabled when launching it on Paradrop.  Below is an example configuration.
   }
 }
 ```
+
+Presence Report
+---------------
+
+Below is an example of a presence report that wifisense sends to
+the recipient specified by the REPORTING_URL.  The network_id is set
+based on the value passed through the NETWORK_ID environment variable.
+The network_id and/or node_mac fields give the recipient a method to
+distinguish different sensors.  The probe_requests array contains an
+entry for each distinct device detected with counts and signal strengths.
+Although the field is called "probe_requests", wifisense is not limited
+to counting probe requests and detects other 802.11 frame types for a
+more complete view of the wireless environment.  Finally, the associated
+field is not valid in the current version of wifisense.  It is always
+set to false because wifisense does not currently track stations'
+association status.
+
+```json
+{ network_id: 0,
+  node_mac: 'xx:xx:xx:xx:xx:xx',
+  version: 1,
+  probe_requests:
+   [ { mac: 'yy:yy:yy:yy:yy:yy',
+       count: 1,
+       min_signal: -85,
+       max_signal: -85,
+       avg_signal: -85,
+       last_seen_signal: -85,
+       first_seen: 1501171051,
+       last_seen: 1501171051,
+       associated: false },
+     { mac: 'zz:zz:zz:zz:zz:zz',
+       count: 40,
+       min_signal: -85,
+       max_signal: -80,
+       avg_signal: -82,
+       last_seen_signal: -81,
+       first_seen: 1501170885,
+       last_seen: 1501171061,
+       associated: false },
+     ... 921 more items ] }
+```
