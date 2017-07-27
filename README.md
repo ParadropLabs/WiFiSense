@@ -64,27 +64,27 @@ set to false because wifisense does not currently track stations'
 association status.
 
 ```json
-{ network_id: 0,
-  node_mac: 'xx:xx:xx:xx:xx:xx',
-  version: 1,
-  probe_requests:
-   [ { mac: 'yy:yy:yy:yy:yy:yy',
-       count: 1,
-       min_signal: -85,
-       max_signal: -85,
-       avg_signal: -85,
-       last_seen_signal: -85,
-       first_seen: 1501171051,
-       last_seen: 1501171051,
-       associated: false },
-     { mac: 'zz:zz:zz:zz:zz:zz',
-       count: 40,
-       min_signal: -85,
-       max_signal: -80,
-       avg_signal: -82,
-       last_seen_signal: -81,
-       first_seen: 1501170885,
-       last_seen: 1501171061,
-       associated: false },
-     ... 921 more items ] }
+{ "network_id": 0,
+  "node_mac": "xx:xx:xx:xx:xx:xx",
+  "version": 1,
+  "probe_requests":
+   [ { "mac": "yy:yy:yy:yy:yy:yy",
+       "count": 1,
+       "min_signal": -85,
+       "max_signal": -85,
+       "avg_signal": -85,
+       "last_seen_signal": -85,
+       "first_seen": 1501171051,
+       "last_seen": 1501171051,
+       "associated": false },
+     { "mac": "zz:zz:zz:zz:zz:zz",
+       "count": 40,
+       "min_signal": -85,
+       "max_signal": -80,
+       "avg_signal": -82,
+       "last_seen_signal": -81,
+       "first_seen": 1501170885,
+       "last_seen": 1501171061,
+       "associated": false }
+   ] }
 ```
